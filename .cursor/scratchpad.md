@@ -10,6 +10,7 @@
 - [x] Update chart labels: Monthly chart to "MMM-YY" format, Weekly chart to "MMM-DD to MMM-YY" format
 - [x] Add dollar amount labels on top of each column in both charts (bold formatting)
 - [x] Git commit and push all changes to remote repository
+- [x] Update .gitignore to ignore raw/, .cursor/, and .env files
 
 ## Executor's Feedback or Assistance Requests
 - ✅ SettingWithCopyWarning has been resolved by adding .copy() to the filter_dividends function
@@ -22,6 +23,13 @@
   - Text is positioned outside the bars for better readability
 - Script runs successfully without warnings and generates properly formatted charts
 - ✅ All changes committed and pushed to remote repository (commit ffc1140)
+- ✅ Created comprehensive .gitignore file to exclude:
+  - .env (environment variables)
+  - raw/ (raw data folder)
+  - .cursor/ (editor-specific files)
+  - Python cache files and virtual environments
+  - IDE and OS-specific files
+- ✅ Updated .gitignore committed and pushed (commit a8400c8)
 
 ## Lessons
 - When filtering DataFrames, always use .copy() to avoid SettingWithCopyWarning when later modifying the filtered data
@@ -29,4 +37,5 @@
 - Weekly periods provide .dt.start_time and .dt.end_time methods for accessing week boundaries
 - In plotly, use `text` parameter in px.bar() to add labels to columns, and `texttemplate="<b>%{text}</b>"` for bold formatting
 - Plotly doesn't support `color="auto"` for textfont; remove color parameter to use default colors or specify explicit colors
-- Use `textposition="outside"` to place labels above the columns for better readability 
+- Use `textposition="outside"` to place labels above the columns for better readability
+- Create comprehensive .gitignore files to exclude sensitive data (.env), temporary files (raw/), and editor-specific directories (.cursor/) 

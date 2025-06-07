@@ -4,6 +4,9 @@
 # Raw data folder
 raw/
 
+# Generated CSV files with sensitive data
+filtered_dividends.csv
+
 # Cursor editor files
 .cursor/
 
