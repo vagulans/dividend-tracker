@@ -1,8 +1,31 @@
-# Ignore the raw folder
+# Environment variables
+.env
+
+# Raw data folder
 raw/
 
-# Ignore the .env file
-.env 
+# Cursor editor files
+.cursor/
 
-# Ignore the .cursor directory and all contents of the raw folder
-.cursor/ 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log 
