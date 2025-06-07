@@ -139,6 +139,28 @@ QQQY     3           2204.31
 YMAG    16           2168.60
 ```
 
+## Screenshots
+
+### Monthly Dividend Chart
+The application generates an interactive monthly view showing dividend income aggregated by month with clean MMM-YY formatting (e.g., "Jul-24", "Aug-24"). Each column displays bold dollar amounts at the top for easy reading.
+
+![Monthly Dividend Chart](screenshots/monthly-dividends.png)
+*Monthly dividend income with dollar amount labels*
+
+### Weekly Dividend Chart (Last 16 Weeks)
+A detailed 16-week view showing recent dividend activity with week ranges in MMM-DD to MMM-YY format (e.g., "May-16 to May-25"). Perfect for tracking recent dividend trends and patterns.
+
+![Weekly Dividend Chart](screenshots/weekly-dividends.png)
+*16-week dividend tracking with date ranges*
+
+### Console Output
+Clean tabular summary showing dividend counts and totals by stock symbol, plus detailed transaction listing.
+
+![Console Output](screenshots/console-output.png)
+*Terminal output showing dividend summary and transaction details*
+
+> **Note**: To add your own screenshots, take screenshots of the charts when they appear in your browser and save them in a `screenshots/` folder in the project root.
+
 ## File Structure
 
 ```
@@ -149,6 +171,10 @@ IBKR/
 ├── .env.sample               # Template for environment setup
 ├── .gitignore                # Git ignore rules
 ├── README.md                 # This file
+├── screenshots/              # Chart screenshots for documentation
+│   ├── monthly-dividends.png
+│   ├── weekly-dividends.png
+│   └── console-output.png
 ├── raw/                      # Raw data from IBKR (not tracked)
 │   └── flex_report_*.csv
 └── filtered_dividends.csv    # Processed dividend data (not tracked)
