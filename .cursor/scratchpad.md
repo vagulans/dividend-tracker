@@ -11,6 +11,7 @@
 - [x] Add dollar amount labels on top of each column in both charts (bold formatting)
 - [x] Git commit and push all changes to remote repository
 - [x] Update .gitignore to ignore raw/, .cursor/, and .env files
+- [x] Add filtered_dividends.csv to .gitignore to exclude sensitive transaction data
 
 ## Executor's Feedback or Assistance Requests
 - ✅ SettingWithCopyWarning has been resolved by adding .copy() to the filter_dividends function
@@ -30,6 +31,7 @@
   - Python cache files and virtual environments
   - IDE and OS-specific files
 - ✅ Updated .gitignore committed and pushed (commit a8400c8)
+- ✅ Added filtered_dividends.csv to .gitignore to protect sensitive account and transaction data (commit 459ff17)
 
 ## Lessons
 - When filtering DataFrames, always use .copy() to avoid SettingWithCopyWarning when later modifying the filtered data
@@ -38,4 +40,5 @@
 - In plotly, use `text` parameter in px.bar() to add labels to columns, and `texttemplate="<b>%{text}</b>"` for bold formatting
 - Plotly doesn't support `color="auto"` for textfont; remove color parameter to use default colors or specify explicit colors
 - Use `textposition="outside"` to place labels above the columns for better readability
-- Create comprehensive .gitignore files to exclude sensitive data (.env), temporary files (raw/), and editor-specific directories (.cursor/) 
+- Create comprehensive .gitignore files to exclude sensitive data (.env), temporary files (raw/), and editor-specific directories (.cursor/)
+- Always exclude generated files containing sensitive account/transaction data (filtered_dividends.csv) from version control 
