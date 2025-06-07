@@ -1,6 +1,7 @@
 import os
 import requests
 import pandas as pd
+import argparse
 from dotenv import load_dotenv
 from io import StringIO
 from datetime import datetime, timedelta
@@ -66,7 +67,18 @@ def filter_dividends(df):
 
 # Main Execution
 if __name__ == "__main__":
-    # Check if a cash transactions CSV exists from today
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="IBKR Dividend Tracker - Fetch and visualize dividend data from Interactive Brokers"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Force fetch fresh data from IBKR, ignoring any cached files from today",
+    )
+    args = parser.parse_args()
+
+    # Check if a cash transactions CSV exists from today (unless --no-cache is specified)
     today = datetime.now().strftime("%Y%m%d")
     raw_dir = "raw"
     cash_files = [
@@ -75,7 +87,9 @@ if __name__ == "__main__":
         if f.startswith("cash_flex_report_") and f.endswith(".csv")
     ]
     latest_cash_file = None
-    if cash_files:
+    use_cache = not args.no_cache
+
+    if cash_files and use_cache:
         latest_cash_file = max(
             cash_files, key=lambda x: os.path.getctime(os.path.join(raw_dir, x))
         )
@@ -91,7 +105,10 @@ if __name__ == "__main__":
             report_content_cash = retrieve_flex_report(TOKEN, reference_code_cash)
             cash_transactions_df = parse_report(report_content_cash)
     else:
-        print("No cash transactions file found. Requesting new data...")
+        if args.no_cache:
+            print("Cache override requested. Fetching fresh data from IBKR...")
+        else:
+            print("No cash transactions file found. Requesting new data...")
         reference_code_cash = request_flex_report(TOKEN, QUERY_ID_CASH_TRANSACTIONS)
         print(
             f"Reference code for cash transactions received: {reference_code_cash}. Retrieving report..."

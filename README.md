@@ -5,8 +5,6 @@ A Python application that fetches dividend transaction data from Interactive Bro
 ## Features
 
 - 📊 **Interactive Charts**: Monthly and weekly dividend income visualization
-- 💰 **Dollar Amount Labels**: Bold currency formatting on chart columns
-- 📅 **Smart Date Formatting**: Human-readable date ranges (MMM-YY, MMM-DD to MMM-YY)
 - 🔄 **Automated Data Fetching**: Retrieves latest dividend data from IBKR
 - 💾 **Local Data Storage**: Saves raw data and filtered results locally
 - 🔒 **Secure Configuration**: Environment-based token management
@@ -116,13 +114,21 @@ FLEX_QUERY_ID_CASH_TRANSACTIONS=your_query_id_here
 
 ### Run the Application
 ```bash
+# Standard run (uses cached data from today if available)
 python main.py
+
+# Force fresh data fetch (ignores cache)
+python main.py --no-cache
 ```
+
+### Command Line Options
+
+- **`--no-cache`**: Force fetch fresh data from IBKR, ignoring any cached files from today. Useful when you want the most up-to-date data or if you suspect cached data might be incomplete.
 
 ### What It Does
 
-1. **Checks for Today's Data**: Looks for existing raw data files from today
-2. **Fetches New Data**: If no current data exists, requests fresh data from IBKR
+1. **Checks for Today's Data**: Looks for existing raw data files from today (unless `--no-cache` is used)
+2. **Fetches New Data**: If no current data exists or cache is bypassed, requests fresh data from IBKR
 3. **Processes Dividends**: Filters transactions to show only dividend payments
 4. **Generates Reports**:
    - Console summary of dividends by symbol
@@ -207,6 +213,10 @@ IBKR/
 **Charts not displaying**
 - Ensure you have dividend data in your account
 - Try running `pip install plotly` to update plotting library
+
+**Stale or incomplete data**
+- Use `python main.py --no-cache` to force fetch fresh data from IBKR
+- Check that your Flex Query date range includes recent transactions
 
 ### Getting Help
 
