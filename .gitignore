@@ -3,3 +3,6 @@ raw/
 
 # Ignore the .env file
 .env 
+
+# Ignore the .cursor directory and all contents of the raw folder
+.cursor/ 
