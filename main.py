@@ -56,12 +56,21 @@ def parse_report(report_content):
     return df
 
 
-def filter_dividends(df):
+def filter_cash_inflows(df):
+    """Filter for all cash inflow types: Dividends, Payment In Lieu Of Dividends, and Broker Interest Received"""
     if "Type" not in df.columns:
         print("Warning: Type column not found in the data")
         return df
-    # Filter for dividends only
-    filtered_df = df[df["Type"] == "Dividends"].copy()
+    
+    # Define cash inflow types
+    cash_inflow_types = [
+        "Dividends",
+        "Payment In Lieu Of Dividends", 
+        "Broker Interest Received"
+    ]
+    
+    # Filter for all cash inflow types
+    filtered_df = df[df["Type"].isin(cash_inflow_types)].copy()
     return filtered_df
 
 
@@ -69,7 +78,7 @@ def filter_dividends(df):
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description="IBKR Dividend Tracker - Fetch and visualize dividend data from Interactive Brokers"
+        description="IBKR Cash Flow Tracker - Fetch and visualize cash inflow data from Interactive Brokers"
     )
     parser.add_argument(
         "--no-cache",
@@ -116,97 +125,225 @@ if __name__ == "__main__":
         report_content_cash = retrieve_flex_report(TOKEN, reference_code_cash)
         cash_transactions_df = parse_report(report_content_cash)
 
-    filtered_dividends = filter_dividends(cash_transactions_df)
+    # Filter for all cash inflows (not just dividends)
+    filtered_cash_inflows = filter_cash_inflows(cash_transactions_df)
 
-    # Summary of dividends by Symbol (underlying)
-    if not filtered_dividends.empty:
-        summary_dividends = (
-            filtered_dividends.groupby("Symbol")
+    # Summary of cash inflows by Type and Symbol
+    if not filtered_cash_inflows.empty:
+        print("\nSummary by Type:")
+        type_summary = (
+            filtered_cash_inflows.groupby("Type")
             .agg({"Amount": "sum", "Date/Time": "count"})
-            .rename(columns={"Amount": "Total Dividends", "Date/Time": "Count"})
+            .rename(columns={"Amount": "Total Amount", "Date/Time": "Count"})
         )
-        print(summary_dividends[["Count", "Total Dividends"]])
+        print(type_summary[["Count", "Total Amount"]])
+        
+        print("\nSummary by Symbol (for dividends and PILODs):")
+        symbol_data = filtered_cash_inflows[filtered_cash_inflows["Symbol"].notna()]
+        if not symbol_data.empty:
+            symbol_summary = (
+                symbol_data.groupby(["Symbol", "Type"])
+                .agg({"Amount": "sum", "Date/Time": "count"})
+                .rename(columns={"Amount": "Total Amount", "Date/Time": "Count"})
+            )
+            print(symbol_summary[["Count", "Total Amount"]])
 
-    # Save filtered dividends
-    if not filtered_dividends.empty:
-        filtered_dividends.to_csv("filtered_dividends.csv", index=False)
-        print("\nFiltered dividends saved to filtered_dividends.csv")
+    # Save filtered cash inflows
+    if not filtered_cash_inflows.empty:
+        filtered_cash_inflows.to_csv("filtered_cash_inflows.csv", index=False)
+        print("\nFiltered cash inflows saved to filtered_cash_inflows.csv")
 
     # Print a clean DataFrame of the transactions
-    if not filtered_dividends.empty:
-        clean_df = filtered_dividends[
-            ["Symbol", "SettleDate", "ReportDate", "ExDate", "Amount"]
+    if not filtered_cash_inflows.empty:
+        clean_df = filtered_cash_inflows[
+            ["Type", "Symbol", "SettleDate", "ReportDate", "ExDate", "Amount"]
         ]
-        print("\nClean DataFrame of Transactions:")
+        print("\nClean DataFrame of Cash Inflow Transactions:")
         print(clean_df)
 
-    # Create a monthly bar chart of dividends received each month
-    if not filtered_dividends.empty:
-        filtered_dividends["Date/Time"] = pd.to_datetime(
-            filtered_dividends["Date/Time"]
+    # Create a monthly stacked bar chart of cash inflows by type
+    if not filtered_cash_inflows.empty:
+        # Handle mixed date formats in the Date/Time column
+        # Some dates are "YYYY-MM-DD;HHMMSS" and others are just "YYYY-MM-DD"
+        filtered_cash_inflows["Date/Time"] = filtered_cash_inflows["Date/Time"].str.split(";").str[0]
+        filtered_cash_inflows["Date/Time"] = pd.to_datetime(
+            filtered_cash_inflows["Date/Time"]
         )
-        monthly_dividends = (
-            filtered_dividends.groupby(
-                filtered_dividends["Date/Time"].dt.to_period("M")
-            )
+        
+        # Group by month and type
+        monthly_cash_inflows = (
+            filtered_cash_inflows.groupby([
+                filtered_cash_inflows["Date/Time"].dt.to_period("M"),
+                "Type"
+            ])
             .agg({"Amount": "sum"})
             .reset_index()
         )
-        # Format monthly labels as MMM-YY
-        monthly_dividends["Date/Time"] = (
-            monthly_dividends["Date/Time"].dt.to_timestamp().dt.strftime("%b-%y")
+        
+        # Sort by date chronologically before formatting to strings
+        monthly_cash_inflows = monthly_cash_inflows.sort_values("Date/Time")
+        
+        # Format monthly labels as MMM-YY after sorting
+        monthly_cash_inflows["Date/Time"] = (
+            monthly_cash_inflows["Date/Time"].dt.to_timestamp().dt.strftime("%b-%y")
         )
-        # Add formatted dollar amounts for text labels
-        monthly_dividends["Amount_Text"] = monthly_dividends["Amount"].apply(
-            lambda x: f"${x:,.0f}"
-        )
+        
+        # Get unique months in chronological order to preserve sorting in plotly
+        month_order = monthly_cash_inflows["Date/Time"].unique().tolist()
+        
+        # Create stacked bar chart
         fig_monthly = px.bar(
-            monthly_dividends,
+            monthly_cash_inflows,
             x="Date/Time",
             y="Amount",
-            text="Amount_Text",
-            title="Monthly Dividends Received",
+            color="Type",
+            title="Monthly Cash Inflows by Type",
+            color_discrete_map={
+                "Dividends": "#2E86AB",
+                "Payment In Lieu Of Dividends": "#A23B72", 
+                "Broker Interest Received": "#F18F01"
+            },
+            category_orders={"Date/Time": month_order}
         )
-        # Format text labels: bold
-        fig_monthly.update_traces(
-            texttemplate="<b>%{text}</b>",
-            textposition="outside",
-            textfont=dict(size=12),
-        )
-        fig_monthly.show()
-
-    # Create a bar chart of dividends received over the last 16 weeks
-    if not filtered_dividends.empty:
-        sixteen_weeks_ago = datetime.now() - timedelta(weeks=16)
-        recent_dividends = filtered_dividends[
-            filtered_dividends["Date/Time"] >= sixteen_weeks_ago
-        ]
-        weekly_dividends = (
-            recent_dividends.groupby(recent_dividends["Date/Time"].dt.to_period("W"))
-            .agg({"Amount": "sum"})
+        
+        # Calculate totals for each month to add labels
+        monthly_totals = (
+            monthly_cash_inflows.groupby("Date/Time")["Amount"]
+            .sum()
             .reset_index()
         )
-        # Format weekly labels as MMM-DD to MMM-YY
-        weekly_start = weekly_dividends["Date/Time"].dt.start_time
-        weekly_end = weekly_dividends["Date/Time"].dt.end_time
-        weekly_dividends["Date/Time"] = (
-            weekly_start.dt.strftime("%b-%d") + " to " + weekly_end.dt.strftime("%b-%y")
-        )
-        # Add formatted dollar amounts for text labels
-        weekly_dividends["Amount_Text"] = weekly_dividends["Amount"].apply(
+        monthly_totals["Amount_Text"] = monthly_totals["Amount"].apply(
             lambda x: f"${x:,.0f}"
         )
-        fig_weekly = px.bar(
-            weekly_dividends,
-            x="Date/Time",
-            y="Amount",
-            text="Amount_Text",
-            title="Dividends Received Over the Last 16 Weeks",
+        
+        # Add total labels on top of stacked bars
+        for i, row in monthly_totals.iterrows():
+            fig_monthly.add_annotation(
+                x=row["Date/Time"],
+                y=row["Amount"],
+                text=f"<b>{row['Amount_Text']}</b>",
+                showarrow=False,
+                yshift=10,
+                font=dict(size=12, color="black")
+            )
+        
+        fig_monthly.update_layout(
+            barmode='stack',
+            yaxis_title="Amount ($)",
+            xaxis_title="Month"
         )
-        # Format text labels: bold
-        fig_weekly.update_traces(
-            texttemplate="<b>%{text}</b>",
-            textposition="outside",
-            textfont=dict(size=12),
-        )
-        fig_weekly.show()
+        # Save HTML file as backup
+        monthly_file = "monthly_cash_inflows.html"
+        fig_monthly.write_html(monthly_file)
+        print(f"\nMonthly chart saved as {monthly_file}")
+        
+        print("Opening monthly chart in browser...")
+        try:
+            fig_monthly.show()
+            print("Monthly chart opened successfully in browser.")
+        except Exception as e:
+            print(f"Could not open monthly chart in browser: {e}")
+            print(f"Please open {monthly_file} manually in your browser.")
+
+    # Create a stacked bar chart of cash inflows over the last 16 weeks
+    if not filtered_cash_inflows.empty:
+        sixteen_weeks_ago = datetime.now() - timedelta(weeks=16)
+        recent_cash_inflows = filtered_cash_inflows[
+            filtered_cash_inflows["Date/Time"] >= sixteen_weeks_ago
+        ]
+        
+        # If no recent data, show all data
+        if recent_cash_inflows.empty:
+            print("No transactions in last 16 weeks. Showing all data for weekly chart.")
+            recent_cash_inflows = filtered_cash_inflows.copy()
+        
+        if not recent_cash_inflows.empty:
+            # Group by week and type
+            weekly_cash_inflows = (
+                recent_cash_inflows.groupby([
+                    recent_cash_inflows["Date/Time"].dt.to_period("W"),
+                    "Type"
+                ])
+                .agg({"Amount": "sum"})
+                .reset_index()
+            )
+            
+            # Format weekly labels as MMM-DD to MMM-DD (or just MMM-DD if same month)
+            weekly_start = weekly_cash_inflows["Date/Time"].dt.start_time
+            weekly_end = weekly_cash_inflows["Date/Time"].dt.end_time
+            
+            # Create date range labels
+            date_labels = []
+            for start, end in zip(weekly_start, weekly_end):
+                if start.month == end.month:
+                    # Same month: "Jun-02 to Jun-08"
+                    label = f"{start.strftime('%b-%d')} to {end.strftime('%b-%d')}"
+                else:
+                    # Different months: "May-30 to Jun-05"
+                    label = f"{start.strftime('%b-%d')} to {end.strftime('%b-%d')}"
+                date_labels.append(label)
+            
+            weekly_cash_inflows["Date/Time"] = date_labels
+            
+            # Determine chart title based on data range
+            num_recent = len(recent_cash_inflows)
+            total_transactions = len(filtered_cash_inflows)
+            if num_recent == total_transactions:
+                chart_title = "Weekly Cash Inflows by Type - All Data"
+            else:
+                chart_title = "Weekly Cash Inflows by Type - Last 16 Weeks"
+            
+            # Create stacked bar chart
+            fig_weekly = px.bar(
+                weekly_cash_inflows,
+                x="Date/Time",
+                y="Amount",
+                color="Type",
+                title=chart_title,
+                color_discrete_map={
+                    "Dividends": "#2E86AB",
+                    "Payment In Lieu Of Dividends": "#A23B72",
+                    "Broker Interest Received": "#F18F01"
+                }
+            )
+            
+            # Calculate totals for each week to add labels
+            weekly_totals = (
+                weekly_cash_inflows.groupby("Date/Time")["Amount"]
+                .sum()
+                .reset_index()
+            )
+            weekly_totals["Amount_Text"] = weekly_totals["Amount"].apply(
+                lambda x: f"${x:,.0f}"
+            )
+            
+            # Add total labels on top of stacked bars
+            for i, row in weekly_totals.iterrows():
+                fig_weekly.add_annotation(
+                    x=row["Date/Time"],
+                    y=row["Amount"],
+                    text=f"<b>{row['Amount_Text']}</b>",
+                    showarrow=False,
+                    yshift=10,
+                    font=dict(size=12, color="black")
+                )
+            
+            fig_weekly.update_layout(
+                barmode='stack',
+                yaxis_title="Amount ($)",
+                xaxis_title="Week"
+            )
+            # Save HTML file as backup
+            weekly_file = "weekly_cash_inflows.html"
+            fig_weekly.write_html(weekly_file)
+            print(f"\nWeekly chart saved as {weekly_file}")
+            
+            print(f"Opening weekly chart in browser ({chart_title})...")
+            try:
+                fig_weekly.show()
+                print("Weekly chart opened successfully in browser.")
+            except Exception as e:
+                print(f"Could not open weekly chart in browser: {e}")
+                print(f"Please open {weekly_file} manually in your browser.")
+        else:
+            print("Unable to create weekly chart - no data available.")
