@@ -1,19 +1,26 @@
-# IBKR Dividend Tracker
+# IBKR Cash Inflow Tracker
 
-A Python application that fetches dividend transaction data from Interactive Brokers (IBKR) using their WebFlex Query API and generates interactive charts showing dividend income over time.
+A Python application that fetches cash inflow transactions (dividends, payments in lieu of dividends, broker interest) from Interactive Brokers (IBKR) via the WebFlex Query API and renders a consolidated, interactive dashboard in a single HTML file.
+
+![Consolidated dashboard with synthetic demo data](screenshots/dashboard.png)
+
+*Screenshot uses fabricated demo data; see [`screenshots/README.md`](screenshots/README.md) for how it's regenerated.*
 
 ## Features
 
-- 📊 **Interactive Charts**: Monthly and weekly dividend income visualization
-- 🔄 **Automated Data Fetching**: Retrieves latest dividend data from IBKR
-- 💾 **Local Data Storage**: Saves raw data and filtered results locally
-- 🔒 **Secure Configuration**: Environment-based token management
+- **Consolidated dashboard**: One `dashboard.html` with all views in a single window
+- **Flexible grouping**: Toggle between Week and Month without rerunning the script
+- **View modes**: Stacked bars by Type, stacked bars by Symbol (top N + Other), or a cumulative stacked-area chart
+- **Adjustable window**: Preset buttons for 4W / 12W / 26W / 52W / YTD / All
+- **Client-side interactivity**: All filtering happens in the browser via Plotly.js; no server needed
+- **Caching**: Raw CSV + daily parsed Parquet cache for fast warm runs
+- **Secure**: `.env`-based token management, nothing leaves your machine
 
 ## Prerequisites
 
-- **IBKR Account**: Active Interactive Brokers account
-- **Python 3.11+**: With conda or pip package manager
-- **WebFlex Access**: IBKR WebFlex Query permissions enabled
+- **IBKR Account** with WebFlex Query access enabled
+- **Python 3.11+**
+- **[uv](https://docs.astral.sh/uv/)** (recommended) or any standard venv + pip
 
 ## IBKR Setup Instructions
 
@@ -71,23 +78,24 @@ git clone https://github.com/vagulans/dividend-tracker.git
 cd dividend-tracker
 ```
 
-### 2. Create Environment
-```bash
-# Using conda (recommended)
-conda create -n ibkr python=3.11
-conda activate ibkr
+### 2. Create Environment & Install Dependencies
 
-# Or using venv
-python -m venv ibkr
-# Windows:
-ibkr\Scripts\activate
-# Linux/Mac:
-source ibkr/bin/activate
+Recommended (uv, single step):
+```bash
+uv sync
 ```
+This creates `.venv/` with Python 3.11 and installs everything pinned in `uv.lock`.
 
-### 3. Install Dependencies
+Alternative (pip + venv):
 ```bash
-pip install requests pandas python-dotenv plotly
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
+
+pip install -e .
+# or: pip install requests pandas python-dotenv plotly
 ```
 
 ### 4. Configure Environment Variables
@@ -115,75 +123,83 @@ FLEX_QUERY_ID_CASH_TRANSACTIONS=your_query_id_here
 ### Run the Application
 ```bash
 # Standard run (uses cached data from today if available)
+uv run python main.py
+
+# Or, with the venv activated:
 python main.py
 
 # Force fresh data fetch (ignores cache)
 python main.py --no-cache
+
+# Rebuild today's parsed cache (re-fetch + re-parse)
+python main.py --refresh
+
+# Write dashboard without opening a browser, silence most logs
+python main.py --no-show --quiet
 ```
 
 ### Command Line Options
 
-- **`--no-cache`**: Force fetch fresh data from IBKR, ignoring any cached files from today. Useful when you want the most up-to-date data or if you suspect cached data might be incomplete.
+- **`--no-cache`**: Ignore today's cached raw CSV and fetch fresh data from IBKR.
+- **`--refresh`**: Rebuild today's parsed Parquet cache even if it exists.
+- **`--quiet`**: Reduce console output for faster, cleaner runs.
+- **`--no-show`**: Write `dashboard.html` but don't open it in the browser.
+- **`--dashboard-file <path>`**: Override the output HTML path (default: `dashboard.html`).
+- **`--top-symbols <N>`**: Default value for the Top N symbols input in the UI (default: 12).
+
+### Dashboard controls (in the browser)
+
+Once `dashboard.html` is open, all interaction happens client-side:
+
+- **Group**: Week / Month
+- **View**: By Type / By Symbol / Cumulative
+- **Window**: 4W / 12W / 26W / 52W / YTD / All
+- **Top N symbols**: number input (1 to 50); tail is bucketed into "Other"
+
+The chart plus the three summary tables (by Type, by Symbol/Type, by Period) and the raw transactions drawer all update live.
 
 ### What It Does
 
-1. **Checks for Today's Data**: Looks for existing raw data files from today (unless `--no-cache` is used)
-2. **Fetches New Data**: If no current data exists or cache is bypassed, requests fresh data from IBKR
-3. **Processes Dividends**: Filters transactions to show only dividend payments
-4. **Generates Reports**:
-   - Console summary of dividends by symbol
-   - `filtered_dividends.csv` file with detailed records
-   - Interactive monthly dividend chart
-   - Interactive 16-week dividend chart
-5. **Displays Charts**: Opens interactive Plotly charts in your browser
-
-### Sample Output
-```
-Symbol  Count  Total Dividends
-MUC     10           6101.25
-QQQY     3           2204.31
-YMAG    16           2168.60
-```
+1. **Checks for today's cache** (Parquet first, then raw CSV). If fresh, skips network and parsing.
+2. **Fetches new data** from IBKR WebFlex if no fresh cache exists or `--no-cache` / `--refresh` is set.
+3. **Filters** for cash inflow types: Dividends, Payment In Lieu Of Dividends, Broker Interest Received.
+4. **Writes** `filtered_cash_inflows.csv` and `cache/filtered_cash_inflows_YYYYMMDD.parquet`.
+5. **Builds** a single `dashboard.html` with the transaction records embedded as JSON, then opens it in your browser (unless `--no-show`).
 
 ## Screenshots
 
-### Monthly Dividend Chart
-The application generates an interactive monthly view showing dividend income aggregated by month with clean MMM-YY formatting (e.g., "Jul-24", "Aug-24"). Each column displays bold dollar amounts at the top for easy reading.
+See [`screenshots/dashboard.png`](screenshots/dashboard.png) for a full-page capture of the dashboard rendered with synthetic demo data. To regenerate it:
 
-![Monthly Dividend Chart](screenshots/monthly-dividends.png)
-*Monthly dividend income with dollar amount labels*
+```powershell
+python scripts/build_demo_dashboard.py
+python scripts/screenshot_dashboard.py
+Remove-Item screenshots/_dashboard_demo.html
+```
 
-### Weekly Dividend Chart (Last 16 Weeks)
-A detailed 16-week view showing recent dividend activity with week ranges in MMM-DD to MMM-YY format (e.g., "May-16 to May-25"). Perfect for tracking recent dividend trends and patterns.
-
-![Weekly Dividend Chart](screenshots/weekly-dividends.png)
-*16-week dividend tracking with date ranges*
-
-### Console Output
-Clean tabular summary showing dividend counts and totals by stock symbol, plus detailed transaction listing.
-
-![Console Output](screenshots/console-output.png)
-*Terminal output showing dividend summary and transaction details*
-
-> **Note**: To add your own screenshots, take screenshots of the charts when they appear in your browser and save them in a `screenshots/` folder in the project root.
+The demo script seeds its random generator so the numbers are deterministic and clearly fabricated (the title reads "IBKR Cash Inflows (demo)"). Do not commit screenshots captured from real account data.
 
 ## File Structure
 
 ```
 IBKR/
-├── main.py                    # Main application script
-├── trades.py                  # Additional trading analysis (optional)
-├── .env                       # Your environment variables (not tracked)
-├── .env.sample               # Template for environment setup
-├── .gitignore                # Git ignore rules
-├── README.md                 # This file
-├── screenshots/              # Chart screenshots for documentation
-│   ├── monthly-dividends.png
-│   ├── weekly-dividends.png
-│   └── console-output.png
-├── raw/                      # Raw data from IBKR (not tracked)
-│   └── flex_report_*.csv
-└── filtered_dividends.csv    # Processed dividend data (not tracked)
+├── main.py                        # Fetch + parse + filter + cache, invokes build_dashboard
+├── dashboard.py                   # Renders the consolidated dashboard HTML
+├── templates/
+│   └── dashboard.html             # UI shell: CSS, controls, Plotly.js, vanilla-JS reducers
+├── trades.py                      # Additional trading analysis (optional)
+├── pyproject.toml                 # Project metadata + dependencies (managed by uv)
+├── uv.lock                        # Pinned dependency lockfile
+├── .env                           # Your environment variables (not tracked)
+├── .env.sample                    # Template for environment setup
+├── .gitignore                     # Git ignore rules
+├── README.md                      # This file
+├── screenshots/                   # Dashboard screenshots (optional)
+├── raw/                           # Raw CSVs from IBKR (not tracked)
+│   └── cash_flex_report_*.csv
+├── cache/                         # Daily parsed Parquet cache (not tracked)
+│   └── filtered_cash_inflows_YYYYMMDD.parquet
+├── filtered_cash_inflows.csv      # Processed transactions (not tracked)
+└── dashboard.html                 # Generated consolidated dashboard (not tracked)
 ```
 
 ## Security Notes
@@ -210,9 +226,10 @@ IBKR/
 - Confirm your date range includes dividend-paying periods
 - Check that your account has dividend transactions in the specified period
 
-**Charts not displaying**
-- Ensure you have dividend data in your account
-- Try running `pip install plotly` to update plotting library
+**Dashboard not displaying**
+- Ensure you have cash inflow data in the selected window (try the `All` preset).
+- The dashboard loads Plotly.js from a CDN; the first open needs internet access. If you need full offline operation, switch to `include_plotlyjs=True` in the template.
+- Make sure your browser is not blocking inline `<script>` tags (corporate policies sometimes do).
 
 **Stale or incomplete data**
 - Use `python main.py --no-cache` to force fetch fresh data from IBKR

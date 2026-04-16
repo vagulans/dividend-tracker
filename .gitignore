@@ -1,11 +1,26 @@
 # Environment variables
 .env
+.env.local
+.env.*.local
 
-# Raw data folder
+# Raw data folder (IBKR Flex downloads - contains personal financial data)
 raw/
 
-# Generated CSV files with sensitive data
+# Parsed / filtered account data (contains personal financial data)
 filtered_dividends.csv
+filtered_cash_inflows.csv
+*_cash_inflows.csv
+cache/
+*.parquet
+
+# Generated dashboards (embeds real transaction records).
+# Anchored to repo root so templates/dashboard.html is still tracked as source.
+/dashboard.html
+/monthly_cash_inflows.html
+/weekly_cash_inflows.html
+/weekly_symbol_chart.html
+/symbol_weekly_cash_inflows.html
+/my_dashboard.html
 
 # Cursor editor files
 .cursor/
@@ -18,6 +33,7 @@ __pycache__/
 .Python
 
 # Virtual environments
+.venv/
 venv/
 env/
 ENV/

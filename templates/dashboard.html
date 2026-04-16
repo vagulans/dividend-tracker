@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>__DASHBOARD_TITLE__</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --panel: #171a21;
+            --panel-2: #1f232c;
+            --border: #2a2f3a;
+            --text: #e6e9ef;
+            --muted: #9aa3b2;
+            --accent: #4c9aff;
+            --accent-2: #2b6bd6;
+            --positive: #31c48d;
+            --negative: #f98181;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel);
+        }
+        header h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.2px; }
+        header .meta { color: var(--muted); font-size: 12px; }
+        .container { padding: 16px 24px 32px; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 28px;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-group .label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .segmented {
+            display: inline-flex;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .segmented button {
+            background: transparent;
+            color: var(--text);
+            border: none;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+        }
+        .segmented button:last-child { border-right: none; }
+        .segmented button:hover { background: rgba(76, 154, 255, 0.08); }
+        .segmented button.active {
+            background: var(--accent-2);
+            color: #fff;
+        }
+        .control-group input[type="number"] {
+            width: 64px;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 13px;
+        }
+        .chart-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 16px;
+        }
+        #chart { width: 100%; height: 520px; }
+        .tables-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .tables-grid .full { grid-column: 1 / -1; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .card h2 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+        td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        tbody tr:hover { background: rgba(76, 154, 255, 0.04); }
+        tfoot td {
+            border-top: 2px solid var(--border);
+            border-bottom: none;
+            font-weight: 600;
+        }
+        .table-scroll { max-height: 360px; overflow: auto; }
+        details.raw {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0;
+            margin-bottom: 16px;
+        }
+        details.raw summary {
+            cursor: pointer;
+            padding: 14px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            user-select: none;
+        }
+        details.raw[open] summary { border-bottom: 1px solid var(--border); }
+        details.raw .content { padding: 8px 16px 16px; }
+        .empty-state {
+            padding: 40px;
+            text-align: center;
+            color: var(--muted);
+        }
+        @media (max-width: 900px) {
+            .tables-grid { grid-template-columns: 1fr; }
+            .controls { position: static; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>__DASHBOARD_TITLE__</h1>
+        <div class="meta">Generated <span id="generated-at">__GENERATED_AT__</span></div>
+    </header>
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <span class="label">Group</span>
+                <div class="segmented" data-control="group">
+                    <button data-value="W">Week</button>
+                    <button data-value="M">Month</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="label">View</span>
+                <div class="segmented" data-control="view">
+                    <button data-value="type">By Type</button>
+                    <button data-value="symbol">By Symbol</button>
+                    <button data-value="cumulative">Cumulative</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="label">Window</span>
+                <div class="segmented" data-control="window">
+                    <button data-value="4W">4W</button>
+                    <button data-value="12W">12W</button>
+                    <button data-value="26W">26W</button>
+                    <button data-value="52W">52W</button>
+                    <button data-value="YTD">YTD</button>
+                    <button data-value="ALL">All</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="label">Top N symbols</span>
+                <input type="number" id="topN" min="1" max="50" step="1" value="__TOP_N_DEFAULT__" />
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div id="chart"></div>
+            <div id="empty-state" class="empty-state" style="display:none;">No data in the selected window.</div>
+        </div>
+
+        <div class="tables-grid">
+            <div class="card">
+                <h2>Summary by Type</h2>
+                <div class="table-scroll"><div id="table-type"></div></div>
+            </div>
+            <div class="card">
+                <h2 id="symbol-heading">Top Symbols/Types</h2>
+                <div class="table-scroll"><div id="table-symbol"></div></div>
+            </div>
+            <div class="card full">
+                <h2 id="period-heading">Summary by Period</h2>
+                <div class="table-scroll"><div id="table-period"></div></div>
+            </div>
+        </div>
+
+        <details class="raw">
+            <summary>Raw transactions (first <span id="raw-shown">0</span> of <span id="raw-total">0</span> rows in current window)</summary>
+            <div class="content">
+                <div class="table-scroll"><div id="table-raw"></div></div>
+            </div>
+        </details>
+    </div>
+
+    <script id="payload" type="application/json">__PAYLOAD_JSON__</script>
+    <script>
+    (function () {
+        "use strict";
+
+        var PAYLOAD = JSON.parse(document.getElementById("payload").textContent);
+        var RECORDS = PAYLOAD.records || [];
+        var MAX_RAW_ROWS = 1000;
+
+        var state = {
+            group: "W",
+            view: "type",
+            window: "52W",
+            topN: parseInt(document.getElementById("topN").value, 10) || 12
+        };
+
+        var fmtMoney = function (n) {
+            var s = (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return s;
+        };
+        var fmtMoneyShort = function (n) {
+            var s = (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            return s;
+        };
+
+        function parseISODate(s) {
+            var parts = s.split("-");
+            return new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+        }
+        function isoDate(d) {
+            var y = d.getUTCFullYear();
+            var m = String(d.getUTCMonth() + 1).padStart(2, "0");
+            var day = String(d.getUTCDate()).padStart(2, "0");
+            return y + "-" + m + "-" + day;
+        }
+        function mondayOf(date) {
+            var d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+            var dow = d.getUTCDay();
+            var diff = (dow === 0 ? -6 : 1 - dow);
+            d.setUTCDate(d.getUTCDate() + diff);
+            return d;
+        }
+        function firstOfMonth(date) {
+            return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+        }
+        function bucketKey(isoStr, group) {
+            var d = parseISODate(isoStr);
+            if (group === "M") return isoDate(firstOfMonth(d));
+            return isoDate(mondayOf(d));
+        }
+        function bucketLabel(bucketIso, group) {
+            var d = parseISODate(bucketIso);
+            var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            if (group === "M") {
+                return months[d.getUTCMonth()] + "-" + String(d.getUTCFullYear()).slice(-2);
+            }
+            return months[d.getUTCMonth()] + "-" + String(d.getUTCDate()).padStart(2, "0");
+        }
+
+        function windowStart(maxDate, windowKey) {
+            if (windowKey === "ALL") return null;
+            if (windowKey === "YTD") return new Date(Date.UTC(maxDate.getUTCFullYear(), 0, 1));
+            var weeks = { "4W": 4, "12W": 12, "26W": 26, "52W": 52 }[windowKey];
+            if (!weeks) return null;
+            var start = mondayOf(maxDate);
+            start.setUTCDate(start.getUTCDate() - 7 * (weeks - 1));
+            return start;
+        }
+
+        function applyWindow(records, state) {
+            if (!records.length) return { rows: [], maxDate: null, startDate: null };
+            var maxIso = records[0].d;
+            for (var i = 1; i < records.length; i++) {
+                if (records[i].d > maxIso) maxIso = records[i].d;
+            }
+            var maxDate = parseISODate(maxIso);
+            var start = windowStart(maxDate, state.window);
+            if (!start) return { rows: records.slice(), maxDate: maxDate, startDate: null };
+            var startIso = isoDate(start);
+            var rows = [];
+            for (var j = 0; j < records.length; j++) {
+                if (records[j].d >= startIso) rows.push(records[j]);
+            }
+            return { rows: rows, maxDate: maxDate, startDate: start };
+        }
+
+        function uniqueSorted(arr) {
+            var seen = {};
+            var out = [];
+            for (var i = 0; i < arr.length; i++) {
+                if (!seen[arr[i]]) { seen[arr[i]] = 1; out.push(arr[i]); }
+            }
+            out.sort();
+            return out;
+        }
+
+        function sumBy(records, keyFn) {
+            var m = {};
+            for (var i = 0; i < records.length; i++) {
+                var r = records[i];
+                var k = keyFn(r);
+                m[k] = (m[k] || 0) + r.a;
+            }
+            return m;
+        }
+
+        function topNSymbols(records, n) {
+            var totals = sumBy(records, function (r) { return r.s; });
+            var entries = Object.keys(totals).map(function (k) { return [k, totals[k]]; });
+            entries.sort(function (a, b) { return b[1] - a[1]; });
+            var top = {};
+            for (var i = 0; i < Math.min(n, entries.length); i++) top[entries[i][0]] = true;
+            return top;
+        }
+
+        function buildBuckets(records, group) {
+            var buckets = {};
+            for (var i = 0; i < records.length; i++) {
+                var r = records[i];
+                var k = bucketKey(r.d, group);
+                if (!buckets[k]) buckets[k] = 0;
+                buckets[k] += r.a;
+            }
+            var keys = Object.keys(buckets).sort();
+            return { keys: keys, totals: buckets };
+        }
+
+        function buildBucketedSeries(records, group, categoryFn) {
+            var seriesMap = {};
+            var bucketSet = {};
+            for (var i = 0; i < records.length; i++) {
+                var r = records[i];
+                var cat = categoryFn(r);
+                var bk = bucketKey(r.d, group);
+                bucketSet[bk] = 1;
+                if (!seriesMap[cat]) seriesMap[cat] = {};
+                seriesMap[cat][bk] = (seriesMap[cat][bk] || 0) + r.a;
+            }
+            var bucketKeys = Object.keys(bucketSet).sort();
+            return { seriesMap: seriesMap, bucketKeys: bucketKeys };
+        }
+
+        var PALETTE = [
+            "#4c9aff", "#31c48d", "#f59f00", "#e64980", "#9775fa",
+            "#22b8cf", "#fa5252", "#82c91e", "#fab005", "#7950f2",
+            "#20c997", "#ff922b", "#845ef7", "#228be6", "#be4bdb"
+        ];
+        function colorFor(i) { return PALETTE[i % PALETTE.length]; }
+
+        var chartEl = document.getElementById("chart");
+        var emptyEl = document.getElementById("empty-state");
+
+        var baseLayout = {
+            paper_bgcolor: "#171a21",
+            plot_bgcolor: "#171a21",
+            font: { color: "#e6e9ef", family: "-apple-system, Segoe UI, Roboto, sans-serif" },
+            margin: { t: 48, r: 24, b: 64, l: 64 },
+            xaxis: { gridcolor: "#2a2f3a", zerolinecolor: "#2a2f3a", automargin: true },
+            yaxis: { gridcolor: "#2a2f3a", zerolinecolor: "#2a2f3a", tickprefix: "$", separatethousands: true, automargin: true },
+            legend: { orientation: "h", y: -0.18, x: 0, font: { size: 11 } },
+            hovermode: "x unified"
+        };
+
+        function renderChart(records) {
+            if (!records.length) {
+                chartEl.style.display = "none";
+                emptyEl.style.display = "block";
+                Plotly.purge(chartEl);
+                return;
+            }
+            chartEl.style.display = "block";
+            emptyEl.style.display = "none";
+
+            var traces = [];
+            var layout = Object.assign({}, baseLayout);
+            layout.xaxis = Object.assign({}, baseLayout.xaxis);
+            layout.yaxis = Object.assign({}, baseLayout.yaxis);
+            layout.annotations = [];
+
+            if (state.view === "type") {
+                var built = buildBucketedSeries(records, state.group, function (r) { return r.t; });
+                var cats = Object.keys(built.seriesMap).sort();
+                var bucketKeys = built.bucketKeys;
+                var labels = bucketKeys.map(function (b) { return bucketLabel(b, state.group); });
+                cats.forEach(function (cat, i) {
+                    var y = bucketKeys.map(function (b) { return built.seriesMap[cat][b] || 0; });
+                    traces.push({
+                        type: "bar", name: cat, x: labels, y: y,
+                        marker: { color: colorFor(i) },
+                        hovertemplate: "%{x}<br>" + cat + ": %{y:$,.2f}<extra></extra>"
+                    });
+                });
+                layout.barmode = "stack";
+                var totalsByBucket = bucketKeys.map(function (b) {
+                    var s = 0;
+                    for (var c in built.seriesMap) s += built.seriesMap[c][b] || 0;
+                    return s;
+                });
+                labels.forEach(function (lab, i) {
+                    if (totalsByBucket[i] !== 0) {
+                        layout.annotations.push({
+                            x: lab, y: totalsByBucket[i], text: "<b>" + fmtMoneyShort(totalsByBucket[i]) + "</b>",
+                            showarrow: false, yshift: 12, font: { size: 10, color: "#e6e9ef" }
+                        });
+                    }
+                });
+                layout.title = { text: "Cash inflows by Type (" + (state.group === "M" ? "monthly" : "weekly") + ")", font: { size: 14 } };
+                layout.yaxis.title = "Amount ($)";
+            } else if (state.view === "symbol") {
+                var topSet = topNSymbols(records, state.topN);
+                var relabeled = records.map(function (r) {
+                    return { d: r.d, t: r.t, s: (topSet[r.s] ? r.s : "Other"), a: r.a };
+                });
+                var built2 = buildBucketedSeries(relabeled, state.group, function (r) { return r.s; });
+                var totals = sumBy(relabeled, function (r) { return r.s; });
+                var cats2 = Object.keys(built2.seriesMap).sort(function (a, b) { return (totals[b] || 0) - (totals[a] || 0); });
+                var bk2 = built2.bucketKeys;
+                var labels2 = bk2.map(function (b) { return bucketLabel(b, state.group); });
+                cats2.forEach(function (cat, i) {
+                    var y = bk2.map(function (b) { return built2.seriesMap[cat][b] || 0; });
+                    traces.push({
+                        type: "bar", name: cat, x: labels2, y: y,
+                        marker: { color: colorFor(i) },
+                        hovertemplate: "%{x}<br>" + cat + ": %{y:$,.2f}<extra></extra>"
+                    });
+                });
+                layout.barmode = "stack";
+                var bucketTotals = bk2.map(function (b) {
+                    var s = 0;
+                    for (var c in built2.seriesMap) s += built2.seriesMap[c][b] || 0;
+                    return s;
+                });
+                labels2.forEach(function (lab, i) {
+                    if (bucketTotals[i] !== 0) {
+                        layout.annotations.push({
+                            x: lab, y: bucketTotals[i], text: "<b>" + fmtMoneyShort(bucketTotals[i]) + "</b>",
+                            showarrow: false, yshift: 12, font: { size: 10, color: "#e6e9ef" }
+                        });
+                    }
+                });
+                layout.title = { text: "Cash inflows by Symbol/Type (" + (state.group === "M" ? "monthly" : "weekly") + ", top " + state.topN + " + Other)", font: { size: 14 } };
+                layout.yaxis.title = "Amount ($)";
+            } else if (state.view === "cumulative") {
+                var built3 = buildBucketedSeries(records, state.group, function (r) { return r.t; });
+                var cats3 = Object.keys(built3.seriesMap).sort();
+                var bk3 = built3.bucketKeys;
+                var labels3 = bk3.map(function (b) { return bucketLabel(b, state.group); });
+                var cumByCat = {};
+                cats3.forEach(function (cat) {
+                    var running = 0;
+                    cumByCat[cat] = bk3.map(function (b) {
+                        running += built3.seriesMap[cat][b] || 0;
+                        return running;
+                    });
+                });
+                cats3.forEach(function (cat, i) {
+                    traces.push({
+                        type: "scatter", mode: "lines", name: cat,
+                        x: labels3, y: cumByCat[cat],
+                        stackgroup: "one",
+                        line: { width: 1.5, color: colorFor(i) },
+                        fillcolor: colorFor(i),
+                        hovertemplate: "%{x}<br>" + cat + ": %{y:$,.2f}<extra></extra>"
+                    });
+                });
+                var totalRunning = labels3.map(function (_, i) {
+                    var s = 0;
+                    cats3.forEach(function (cat) { s += cumByCat[cat][i]; });
+                    return s;
+                });
+                traces.push({
+                    type: "scatter", mode: "lines+markers", name: "Total",
+                    x: labels3, y: totalRunning,
+                    line: { width: 2, color: "#e6e9ef", dash: "dot" },
+                    marker: { size: 5 },
+                    hovertemplate: "%{x}<br>Total: %{y:$,.2f}<extra></extra>"
+                });
+                layout.title = { text: "Cumulative cash inflows (" + (state.group === "M" ? "monthly" : "weekly") + ")", font: { size: 14 } };
+                layout.yaxis.title = "Cumulative amount ($)";
+            }
+
+            Plotly.react(chartEl, traces, layout, { displaylogo: false, responsive: true });
+        }
+
+        function renderTypeTable(records) {
+            var totals = sumBy(records, function (r) { return r.t; });
+            var counts = {};
+            records.forEach(function (r) { counts[r.t] = (counts[r.t] || 0) + 1; });
+            var grand = 0;
+            Object.keys(totals).forEach(function (k) { grand += totals[k]; });
+            var entries = Object.keys(totals).map(function (k) { return { type: k, total: totals[k], count: counts[k] }; });
+            entries.sort(function (a, b) { return b.total - a.total; });
+            var rows = entries.map(function (e) {
+                var pct = grand ? (e.total / grand * 100).toFixed(1) + "%" : "-";
+                return "<tr><td>" + escapeHTML(e.type) + "</td><td class=\"num\">" + e.count + "</td><td class=\"num\">" + fmtMoney(e.total) + "</td><td class=\"num\">" + pct + "</td></tr>";
+            }).join("");
+            var html = "<table><thead><tr><th>Type</th><th class=\"num\">Count</th><th class=\"num\">Total</th><th class=\"num\">Share</th></tr></thead>" +
+                "<tbody>" + rows + "</tbody>" +
+                "<tfoot><tr><td>Grand total</td><td class=\"num\">" + records.length + "</td><td class=\"num\">" + fmtMoney(grand) + "</td><td class=\"num\">100%</td></tr></tfoot></table>";
+            document.getElementById("table-type").innerHTML = html;
+        }
+
+        function renderSymbolTable(records) {
+            var topSet = topNSymbols(records, state.topN);
+            var relabeled = records.map(function (r) {
+                return { d: r.d, t: r.t, s: (topSet[r.s] ? r.s : "Other"), a: r.a };
+            });
+            var totals = sumBy(relabeled, function (r) { return r.s; });
+            var grand = 0;
+            Object.keys(totals).forEach(function (k) { grand += totals[k]; });
+            var entries = Object.keys(totals).map(function (k) { return { s: k, total: totals[k] }; });
+            entries.sort(function (a, b) {
+                if (a.s === "Other") return 1;
+                if (b.s === "Other") return -1;
+                return b.total - a.total;
+            });
+            var rows = entries.map(function (e) {
+                var pct = grand ? (e.total / grand * 100).toFixed(1) + "%" : "-";
+                return "<tr><td>" + escapeHTML(e.s) + "</td><td class=\"num\">" + fmtMoney(e.total) + "</td><td class=\"num\">" + pct + "</td></tr>";
+            }).join("");
+            var html = "<table><thead><tr><th>Symbol/Type</th><th class=\"num\">Total</th><th class=\"num\">Share</th></tr></thead>" +
+                "<tbody>" + rows + "</tbody>" +
+                "<tfoot><tr><td>Grand total</td><td class=\"num\">" + fmtMoney(grand) + "</td><td class=\"num\">100%</td></tr></tfoot></table>";
+            document.getElementById("table-symbol").innerHTML = html;
+            document.getElementById("symbol-heading").textContent = "Top " + state.topN + " Symbols/Types (tail grouped as Other)";
+        }
+
+        function renderPeriodTable(records) {
+            var built = buildBucketedSeries(records, state.group, function (r) { return r.t; });
+            var cats = Object.keys(built.seriesMap).sort();
+            var bucketKeys = built.bucketKeys.slice().sort().reverse();
+            var head = "<tr><th>" + (state.group === "M" ? "Month" : "Week starting") + "</th>" +
+                cats.map(function (c) { return "<th class=\"num\">" + escapeHTML(c) + "</th>"; }).join("") +
+                "<th class=\"num\">Total</th></tr>";
+            var grand = 0;
+            var body = bucketKeys.map(function (b) {
+                var cells = cats.map(function (c) {
+                    var v = built.seriesMap[c][b] || 0;
+                    return "<td class=\"num\">" + (v ? fmtMoney(v) : "-") + "</td>";
+                }).join("");
+                var rowTotal = 0;
+                cats.forEach(function (c) { rowTotal += built.seriesMap[c][b] || 0; });
+                grand += rowTotal;
+                return "<tr><td>" + bucketLabel(b, state.group) + "</td>" + cells + "<td class=\"num\"><b>" + fmtMoney(rowTotal) + "</b></td></tr>";
+            }).join("");
+            var totalCells = cats.map(function (c) {
+                var s = 0;
+                bucketKeys.forEach(function (b) { s += built.seriesMap[c][b] || 0; });
+                return "<td class=\"num\">" + fmtMoney(s) + "</td>";
+            }).join("");
+            var foot = "<tr><td>Grand total</td>" + totalCells + "<td class=\"num\">" + fmtMoney(grand) + "</td></tr>";
+            document.getElementById("table-period").innerHTML =
+                "<table><thead>" + head + "</thead><tbody>" + body + "</tbody><tfoot>" + foot + "</tfoot></table>";
+            document.getElementById("period-heading").textContent = "Summary by " + (state.group === "M" ? "Month" : "Week");
+        }
+
+        function renderRawTable(records) {
+            document.getElementById("raw-total").textContent = records.length.toLocaleString();
+            var sorted = records.slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; });
+            var slice = sorted.slice(0, MAX_RAW_ROWS);
+            document.getElementById("raw-shown").textContent = slice.length.toLocaleString();
+            var rows = slice.map(function (r) {
+                return "<tr><td>" + r.d + "</td><td>" + escapeHTML(r.t) + "</td><td>" + escapeHTML(r.s) + "</td><td class=\"num\">" + fmtMoney(r.a) + "</td></tr>";
+            }).join("");
+            var html = "<table><thead><tr><th>Date</th><th>Type</th><th>Symbol/Type</th><th class=\"num\">Amount</th></tr></thead><tbody>" + rows + "</tbody></table>";
+            document.getElementById("table-raw").innerHTML = html;
+        }
+
+        function escapeHTML(s) {
+            if (s === null || s === undefined) return "";
+            return String(s)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function render() {
+            var r = applyWindow(RECORDS, state);
+            renderChart(r.rows);
+            renderTypeTable(r.rows);
+            renderSymbolTable(r.rows);
+            renderPeriodTable(r.rows);
+            renderRawTable(r.rows);
+        }
+
+        function setActive(control, value) {
+            var group = document.querySelector('.segmented[data-control="' + control + '"]');
+            if (!group) return;
+            Array.prototype.forEach.call(group.querySelectorAll("button"), function (btn) {
+                if (btn.getAttribute("data-value") === value) btn.classList.add("active");
+                else btn.classList.remove("active");
+            });
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll(".segmented"), function (group) {
+            var control = group.getAttribute("data-control");
+            group.addEventListener("click", function (ev) {
+                var btn = ev.target.closest("button");
+                if (!btn) return;
+                var value = btn.getAttribute("data-value");
+                state[control] = value;
+                setActive(control, value);
+                render();
+            });
+        });
+
+        var topNInput = document.getElementById("topN");
+        topNInput.addEventListener("change", function () {
+            var v = parseInt(topNInput.value, 10);
+            if (!isFinite(v) || v < 1) v = 1;
+            if (v > 50) v = 50;
+            topNInput.value = v;
+            state.topN = v;
+            render();
+        });
+
+        setActive("group", state.group);
+        setActive("view", state.view);
+        setActive("window", state.window);
+        render();
+    })();
+    </script>
+</body>
+</html>
